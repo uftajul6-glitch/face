@@ -24,9 +24,9 @@
   </script>
   <style>
     body { background-color: #0b0f19; color: #f3f4f6; }
-    /* Memastikan video tidak mirror */
+    /* Mengatur agar gerakan kamera tidak terbalik (jika nengok kiri, di layar tetap ke kiri) */
     #video {
-      transform: scaleX(1);
+      transform: scaleX(-1);
     }
   </style>
 </head>
@@ -34,7 +34,7 @@
 <body class="min-h-screen font-sans antialiased flex flex-col items-center justify-center p-4">
 
   <div class="w-full max-w-md bg-[#131d31] border border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
-    <!-- LOGO EMOJI WAJAH -->
+    <!-- LOGO EMOJI WAJAH & TOMBOL GANTI KAMERA -->
     <div class="flex items-center justify-between">
       <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
         <i class="fa-solid fa-face-smile"></i>
@@ -50,7 +50,7 @@
       <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
     </div>
 
-    <!-- TAMPILAN KAMERA WEBCAM (Portrait di HP, Landscape di Desktop) -->
+    <!-- TAMPILAN KAMERA WEBCAM -->
     <div id="cameraContainer" class="relative overflow-hidden rounded-2xl bg-black aspect-[3/4] sm:aspect-video border border-gray-800 shadow-inner flex items-center justify-center max-h-[380px] sm:max-h-none">
       <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
     </div>
@@ -106,7 +106,7 @@
 
     let isModelLoaded = false;
     let cameraStream = null;
-    let useFrontCamera = true; // Status kamera depan (true) atau belakang (false)
+    let useFrontCamera = true; // True untuk kamera depan, False untuk kamera belakang
 
     function loadScript(src) {
       return new Promise((resolve, reject) => {
@@ -171,7 +171,7 @@
       }
     }
 
-    // Event listener untuk tombol Ganti Kamera
+    // Event listener tombol ganti kamera
     switchCameraBtn.addEventListener('click', () => {
       useFrontCamera = !useFrontCamera;
       startCamera();
