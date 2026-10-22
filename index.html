@@ -10,9 +10,6 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Face API JS (AI Detector) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -47,11 +44,11 @@
     <div>
       <input type="text" id="usernameInput" placeholder="Masukkan Nama / Username" class="w-full px-4 py-3 text-xs rounded-xl border border-gray-800 bg-gray-900 focus:outline-none focus:border-brand-500 mb-3 text-center font-semibold">
       <button id="snapBtn" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-        <i class="fa-solid fa-camera mr-1.5"></i> Memuat AI Detector...
+        <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat AI Detector...
       </button>
     </div>
 
-    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat model AI pendeteksi wajah...</p>
+    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat library AI pendeteksi wajah...</p>
 
     <!-- FOOTER / KREDIT PEMBUAT -->
     <div class="pt-2 border-t border-gray-800/60 text-[11px] text-gray-500">
@@ -75,19 +72,36 @@
 
     let isModelLoaded = false;
 
-    // 1. Inisialisasi Model AI Pendeteksi Wajah (Tiny Face Detector)
-    async function loadModels() {
+    // Fungsi muat script external dinamis
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    // 1. Inisialisasi Library & Model AI
+    async function initAI() {
       try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        statusMsg.innerText = "Mengunduh modul pendeteksi wajah...";
+        // Load face-api library secara dinamis dari CDN yang stabil
+        await loadScript('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js');
+
+        statusMsg.innerText = "Memuat model AI...";
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+
         isModelLoaded = true;
-        
         snapBtn.disabled = false;
         snapBtn.innerHTML = `<i class="fa-solid fa-camera mr-1.5"></i> Ambil Foto & Absen`;
         statusMsg.innerText = "Sistem AI Siap. Posisikan wajah Anda.";
         statusMsg.className = "text-xs font-medium text-emerald-400";
       } catch (err) {
-        statusMsg.innerText = "Gagal memuat AI: " + err.message;
+        console.error(err);
+        statusMsg.innerText = "Gagal memuat AI: " + (err.message || "Gagal mengunduh script AI");
         statusMsg.className = "text-xs font-medium text-rose-400";
       }
     }
@@ -96,7 +110,7 @@
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
       .then(stream => { 
         video.srcObject = stream; 
-        video.onloadeddata = () => loadModels();
+        video.onloadeddata = () => initAI();
       })
       .catch(err => {
         statusMsg.innerText = "Gagal mengakses kamera: " + err.message;
@@ -126,15 +140,15 @@
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // --- DETEKSI WAJAH MENGGUNAKAN AI ---
-      const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }));
+      const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }));
 
       if (detections.length === 0) {
         statusMsg.innerText = "❌ Gagal: Wajah tidak terdeteksi! Pastikan wajah Anda terlihat jelas.";
         statusMsg.className = "text-xs font-medium text-rose-400";
-        return; // Hentikan proses, tidak diupload ke Supabase
+        return; // Hentikan proses
       }
 
-      statusMsg.innerText = `✅ Wajah terdeteksi (${detections.length})! Mengunggah presensi...`;
+      statusMsg.innerText = `✅ Wajah terdeteksi! Mengunggah presensi...`;
       statusMsg.className = "text-xs font-medium text-emerald-400";
 
       // Konversi Canvas ke File Gambar (Blob) & Simpan ke Supabase
