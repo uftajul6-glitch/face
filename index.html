@@ -31,7 +31,7 @@
 
   <div class="w-full max-w-md bg-[#131d31] border border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
     <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
-      <i class="fa-solid fa-face-smile-wink"></i>
+      <i class="fa-solid fa-location-dot"></i>
     </div>
     <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
     <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
@@ -47,7 +47,7 @@
         <i class="fa-solid fa-circle-check"></i>
       </div>
       <h2 class="text-lg font-bold text-emerald-400">Presensi Selesai!</h2>
-      <p id="successUserText" class="text-xs text-gray-300">Terima kasih, kehadiran Anda telah berhasil dicatat.</p>
+      <p id="successUserText" class="text-xs text-gray-300">Terima kasih, kehadiran beserta lokasi & perangkat Anda telah dicatat.</p>
       <button id="resetBtn" class="mt-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-semibold transition border border-gray-700">
         <i class="fa-solid fa-rotate-right mr-1.5"></i> Presensi Lagi
       </button>
@@ -57,11 +57,11 @@
     <div id="formSection">
       <input type="text" id="usernameInput" placeholder="Masukkan Nama / Username" class="w-full px-4 py-3 text-xs rounded-xl border border-gray-800 bg-gray-900 focus:outline-none focus:border-brand-500 mb-3 text-center font-semibold">
       <button id="snapBtn" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-        <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat Pendeteksi Wajah...
+        <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat Modul...
       </button>
     </div>
 
-    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat modul pendeteksi wajah...</p>
+    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat sistem pendeteksi wajah...</p>
 
     <!-- FOOTER / KREDIT PEMBUAT -->
     <div class="pt-2 border-t border-gray-800/60 text-[11px] text-gray-500">
@@ -92,7 +92,6 @@
     let isModelLoaded = false;
     let cameraStream = null;
 
-    // Fungsi muat script external dinamis
     function loadScript(src) {
       return new Promise((resolve, reject) => {
         const s = document.createElement('script');
@@ -103,7 +102,7 @@
       });
     }
 
-    // 1. Inisialisasi Library & Modul Deteksi Wajah
+    // 1. Inisialisasi Deteksi Wajah
     async function initDetector() {
       try {
         statusMsg.innerText = "Mengunduh modul pendeteksi wajah...";
@@ -125,7 +124,6 @@
       }
     }
 
-    // 2. Akses Kamera Perangkat
     function startCamera() {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
         .then(stream => { 
@@ -141,7 +139,6 @@
         });
     }
 
-    // Fungsi Matikan Kamera Perangkat
     function stopCamera() {
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
@@ -149,10 +146,28 @@
       }
     }
 
-    // Mulai kamera pertama kali
     startCamera();
 
-    // 3. Tombol Ambil Foto dengan Verifikasi Wajah
+    // Fungsi untuk mendapatkan koordinat lokasi GPS
+    function getLoc() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve("GPS tidak didukung browser");
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              resolve(`${pos.coords.latitude}, ${pos.coords.longitude}`);
+            },
+            (err) => {
+              resolve("Lokasi ditolak / tidak aktif");
+            },
+            { timeout: 10000 }
+          );
+        }
+      });
+    }
+
+    // 2. Tombol Absen
     snapBtn.addEventListener('click', async () => {
       const username = document.getElementById('usernameInput').value.trim().toLowerCase();
       if (!username) {
@@ -165,16 +180,19 @@
         return;
       }
 
-      statusMsg.innerText = "Mendeteksi wajah...";
+      statusMsg.innerText = "Mengambil data lokasi & mendeteksi wajah...";
       statusMsg.className = "text-xs font-medium text-yellow-400";
 
-      // Tangkap frame gambar dari kamera ke Canvas
+      // Ambil lokasi GPS secara paralel
+      const koordinatLokasi = await getLoc();
+      const infoPerangkat = navigator.userAgent;
+
+      // Tangkap frame gambar ke Canvas
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // --- DETEKSI WAJAH ---
       const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }));
 
       if (detections.length === 0) {
@@ -186,13 +204,11 @@
       statusMsg.innerText = `✅ Wajah terdeteksi! Mengunggah presensi...`;
       statusMsg.className = "text-xs font-medium text-emerald-400";
 
-      // Konversi Canvas ke File Gambar (Blob) & Simpan ke Supabase
       canvas.toBlob(async (blob) => {
         if (!blob) return;
 
         const fileName = `${username}_${Date.now()}.jpg`;
 
-        // Upload ke Supabase Storage
         const { data: uploadData, error: uploadError } = await db.storage
           .from('foto-presensi')
           .upload(fileName, blob, { contentType: 'image/jpeg' });
@@ -203,40 +219,38 @@
           return;
         }
 
-        // Ambil Public URL foto
         const { data: urlData } = db.storage
           .from('foto-presensi')
           .getPublicUrl(fileName);
 
         const fotoUrl = urlData.publicUrl;
 
-        // Simpan log ke tabel Supabase 'presensi'
+        // Simpan data lengkap ke database termasuk lokasi dan perangkat
         const { error: dbError } = await db.from('presensi').insert([{
           username: username,
-          foto_url: fotoUrl
+          foto_url: fotoUrl,
+          device_info: infoPerangkat,
+          lokasi: koordinatLokasi
         }]);
 
         if (dbError) {
           statusMsg.innerText = "Gagal simpan database: " + dbError.message;
           statusMsg.className = "text-xs font-medium text-rose-400";
         } else {
-          // --- PROSES PRESENSI SELESAI ---
-          stopCamera(); // 1. Matikan kamera
+          stopCamera();
           
-          // 2. Ubah Tampilan UI
           cameraContainer.classList.add('hidden');
           formSection.classList.add('hidden');
           successCard.classList.remove('hidden');
           subTitle.innerText = "Status Presensi Hari Ini";
           statusMsg.innerText = "";
 
-          successUserText.innerHTML = `Terima kasih <span class="text-white font-bold capitalize">${username}</span>, kehadiran Anda telah berhasil dicatat.`;
+          successUserText.innerHTML = `Terima kasih <span class="text-white font-bold capitalize">${username}</span>, kehadiran, perangkat, dan lokasi Anda telah berhasil dicatat.`;
           document.getElementById('usernameInput').value = '';
         }
       }, 'image/jpeg', 0.85);
     });
 
-    // Reset untuk Presensi Lagi
     resetBtn.addEventListener('click', () => {
       successCard.classList.add('hidden');
       cameraContainer.classList.remove('hidden');
@@ -245,9 +259,8 @@
       statusMsg.innerText = "Sistem Siap. Posisikan wajah Anda.";
       statusMsg.className = "text-xs font-medium text-emerald-400";
       
-      startCamera(); // Nyalakan kembali kamera
+      startCamera();
     });
   </script>
 </body>
 </html>
-
