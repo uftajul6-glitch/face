@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Presensi Wajah AI - Supabase</title>
+  <title>Aplikasi Presensi Wajah - Supabase</title>
 
   <!-- Tailwind CSS & Supabase SDK -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -33,7 +33,7 @@
     <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
       <i class="fa-solid fa-face-smile-wink"></i>
     </div>
-    <h1 class="text-lg font-bold text-white">Presensi Wajah AI</h1>
+    <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
     <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
 
     <!-- TAMPILAN KAMERA WEBCAM -->
@@ -41,7 +41,7 @@
       <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
     </div>
 
-    <!-- TAMPILAN SUKSES SELESAI (Hidden secara default) -->
+    <!-- TAMPILAN SUKSES SELESAI -->
     <div id="successCard" class="hidden py-8 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col items-center space-y-3">
       <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-3xl">
         <i class="fa-solid fa-circle-check"></i>
@@ -57,11 +57,11 @@
     <div id="formSection">
       <input type="text" id="usernameInput" placeholder="Masukkan Nama / Username" class="w-full px-4 py-3 text-xs rounded-xl border border-gray-800 bg-gray-900 focus:outline-none focus:border-brand-500 mb-3 text-center font-semibold">
       <button id="snapBtn" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-        <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat AI Detector...
+        <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat Pendeteksi Wajah...
       </button>
     </div>
 
-    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat library AI pendeteksi wajah...</p>
+    <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat modul pendeteksi wajah...</p>
 
     <!-- FOOTER / KREDIT PEMBUAT -->
     <div class="pt-2 border-t border-gray-800/60 text-[11px] text-gray-500">
@@ -71,7 +71,7 @@
 
   <canvas id="canvas" class="hidden"></canvas>
 
-  <!-- LOGIKA JAVASCRIPT, AI & SUPABASE -->
+  <!-- LOGIKA JAVASCRIPT & SUPABASE -->
   <script>
     const SUPABASE_URL = 'https://ncourmvtmktstcxunwdf.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_1k5bkybnidsKSBV7784t2Q_E5DNbD3R';
@@ -103,24 +103,24 @@
       });
     }
 
-    // 1. Inisialisasi Library & Model AI
-    async function initAI() {
+    // 1. Inisialisasi Library & Modul Deteksi Wajah
+    async function initDetector() {
       try {
         statusMsg.innerText = "Mengunduh modul pendeteksi wajah...";
         await loadScript('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js');
 
-        statusMsg.innerText = "Memuat model AI...";
+        statusMsg.innerText = "Memuat pendeteksi wajah...";
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 
         isModelLoaded = true;
         snapBtn.disabled = false;
         snapBtn.innerHTML = `<i class="fa-solid fa-camera mr-1.5"></i> Ambil Foto & Absen`;
-        statusMsg.innerText = "Sistem AI Siap. Posisikan wajah Anda.";
+        statusMsg.innerText = "Sistem Siap. Posisikan wajah Anda.";
         statusMsg.className = "text-xs font-medium text-emerald-400";
       } catch (err) {
         console.error(err);
-        statusMsg.innerText = "Gagal memuat AI: " + (err.message || "Gagal mengunduh script AI");
+        statusMsg.innerText = "Gagal memuat pendeteksi: " + (err.message || "Gagal mengunduh modul");
         statusMsg.className = "text-xs font-medium text-rose-400";
       }
     }
@@ -132,7 +132,7 @@
           cameraStream = stream;
           video.srcObject = stream; 
           video.onloadeddata = () => {
-            if (!isModelLoaded) initAI();
+            if (!isModelLoaded) initDetector();
           };
         })
         .catch(err => {
@@ -152,7 +152,7 @@
     // Mulai kamera pertama kali
     startCamera();
 
-    // 3. Tombol Ambil Foto dengan Verifikasi Wajah AI
+    // 3. Tombol Ambil Foto dengan Verifikasi Wajah
     snapBtn.addEventListener('click', async () => {
       const username = document.getElementById('usernameInput').value.trim().toLowerCase();
       if (!username) {
@@ -161,7 +161,7 @@
       }
 
       if (!isModelLoaded) {
-        alert("Model AI belum selesai dimuat, harap tunggu sebentar.");
+        alert("Modul pendeteksi belum selesai dimuat, harap tunggu sebentar.");
         return;
       }
 
@@ -174,7 +174,7 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // --- DETEKSI WAJAH MENGGUNAKAN AI ---
+      // --- DETEKSI WAJAH ---
       const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }));
 
       if (detections.length === 0) {
@@ -242,7 +242,7 @@
       cameraContainer.classList.remove('hidden');
       formSection.classList.remove('hidden');
       subTitle.innerText = "Posisikan wajah Anda dengan jelas di depan kamera";
-      statusMsg.innerText = "Sistem AI Siap. Posisikan wajah Anda.";
+      statusMsg.innerText = "Sistem Siap. Posisikan wajah Anda.";
       statusMsg.className = "text-xs font-medium text-emerald-400";
       
       startCamera(); // Nyalakan kembali kamera
@@ -250,3 +250,4 @@
   </script>
 </body>
 </html>
+
