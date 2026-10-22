@@ -24,19 +24,31 @@
   </script>
   <style>
     body { background-color: #0b0f19; color: #f3f4f6; }
+    /* Memastikan video tidak mirror */
+    #video {
+      transform: scaleX(1);
+    }
   </style>
 </head>
 
 <body class="min-h-screen font-sans antialiased flex flex-col items-center justify-center p-4">
 
-  <div class="w-full max-w-md bg-[#131d31] border border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
+  <div class="w-full max-w-md bg-[#131d31] border border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
     <!-- LOGO EMOJI WAJAH -->
-    <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
-      <i class="fa-solid fa-face-smile"></i>
+    <div class="flex items-center justify-between">
+      <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
+        <i class="fa-solid fa-face-smile"></i>
+      </div>
+      <!-- Tombol Ganti Kamera Depan/Belakang -->
+      <button id="switchCameraBtn" type="button" class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold transition border border-gray-700 flex items-center gap-1.5">
+        <i class="fa-solid fa-camera-rotate"></i> Ganti Kamera
+      </button>
     </div>
     
-    <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
-    <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
+    <div>
+      <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
+      <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
+    </div>
 
     <!-- TAMPILAN KAMERA WEBCAM (Portrait di HP, Landscape di Desktop) -->
     <div id="cameraContainer" class="relative overflow-hidden rounded-2xl bg-black aspect-[3/4] sm:aspect-video border border-gray-800 shadow-inner flex items-center justify-center max-h-[380px] sm:max-h-none">
@@ -44,7 +56,7 @@
     </div>
 
     <!-- TAMPILAN SUKSES SELESAI -->
-    <div id="successCard" class="hidden py-8 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col items-center space-y-3">
+    <div id="successCard" class="hidden py-8 px-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col items-center space-y-3 text-center">
       <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-3xl">
         <i class="fa-solid fa-circle-check"></i>
       </div>
@@ -57,7 +69,7 @@
 
     <!-- INPUT & TOMBOL -->
     <div id="formSection">
-      <input type="text" id="usernameInput" placeholder="Masukkan Nama / Username" class="w-full px-4 py-3 text-xs rounded-xl border border-gray-800 bg-gray-900 focus:outline-none focus:border-brand-500 mb-3 text-center font-semibold">
+      <input type="text" id="usernameInput" placeholder="Masukkan Nama / Username" class="w-full px-4 py-3 text-xs rounded-xl border border-gray-800 bg-gray-900 focus:outline-none focus:border-brand-500 mb-3 font-semibold">
       <button id="snapBtn" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
         <i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Memuat Modul...
       </button>
@@ -66,7 +78,7 @@
     <p id="statusMsg" class="text-xs font-medium text-yellow-400">Sedang memuat sistem pendeteksi wajah...</p>
 
     <!-- FOOTER / KREDIT PEMBUAT -->
-    <div class="pt-2 border-t border-gray-800/60 text-[11px] text-gray-500">
+    <div class="pt-2 border-t border-gray-800/60 text-[11px] text-gray-500 text-center">
       Developed by <span class="text-brand-500 font-semibold">Taztsuu</span>
     </div>
   </div>
@@ -90,9 +102,11 @@
     const successUserText = document.getElementById('successUserText');
     const resetBtn = document.getElementById('resetBtn');
     const subTitle = document.getElementById('subTitle');
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
 
     let isModelLoaded = false;
     let cameraStream = null;
+    let useFrontCamera = true; // Status kamera depan (true) atau belakang (false)
 
     function loadScript(src) {
       return new Promise((resolve, reject) => {
@@ -127,11 +141,14 @@
     }
 
     function startCamera() {
-      // Mengoptimalkan resolusi video berdasarkan lebar layar
+      if (cameraStream) {
+        stopCamera();
+      }
+
       const isMobile = window.innerWidth < 640;
       const videoConstraints = isMobile 
-        ? { facingMode: "user", width: { ideal: 480 }, height: { ideal: 640 } }
-        : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+        ? { facingMode: useFrontCamera ? "user" : "environment", width: { ideal: 480 }, height: { ideal: 640 } }
+        : { facingMode: useFrontCamera ? "user" : "environment", width: { ideal: 640 }, height: { ideal: 480 } };
 
       navigator.mediaDevices.getUserMedia({ video: videoConstraints })
         .then(stream => { 
@@ -153,6 +170,12 @@
         cameraStream = null;
       }
     }
+
+    // Event listener untuk tombol Ganti Kamera
+    switchCameraBtn.addEventListener('click', () => {
+      useFrontCamera = !useFrontCamera;
+      startCamera();
+    });
 
     startCamera();
 
@@ -245,6 +268,7 @@
           
           cameraContainer.classList.add('hidden');
           formSection.classList.add('hidden');
+          switchCameraBtn.classList.add('hidden');
           successCard.classList.remove('hidden');
           subTitle.innerText = "Status Presensi Hari Ini";
           statusMsg.innerText = "";
@@ -259,6 +283,7 @@
       successCard.classList.add('hidden');
       cameraContainer.classList.remove('hidden');
       formSection.classList.remove('hidden');
+      switchCameraBtn.classList.remove('hidden');
       subTitle.innerText = "Posisikan wajah Anda dengan jelas di depan kamera";
       statusMsg.innerText = "Sistem Siap. Posisikan wajah Anda.";
       statusMsg.className = "text-xs font-medium text-emerald-400";
