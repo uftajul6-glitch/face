@@ -30,9 +30,11 @@
 <body class="min-h-screen font-sans antialiased flex flex-col items-center justify-center p-4">
 
   <div class="w-full max-w-md bg-[#131d31] border border-gray-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
+    <!-- LOGO EMOJI WAJAH -->
     <div class="inline-flex items-center justify-center w-12 h-12 bg-brand-500/10 border border-brand-500/30 rounded-2xl text-brand-500 text-xl shadow">
-      <i class="fa-solid fa-location-dot"></i>
+      <i class="fa-solid fa-face-smile"></i>
     </div>
+    
     <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
     <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
 
@@ -47,7 +49,7 @@
         <i class="fa-solid fa-circle-check"></i>
       </div>
       <h2 class="text-lg font-bold text-emerald-400">Presensi Selesai!</h2>
-      <p id="successUserText" class="text-xs text-gray-300">Terima kasih, kehadiran beserta lokasi & perangkat Anda telah dicatat.</p>
+      <p id="successUserText" class="text-xs text-gray-300">Terima kasih, kehadiran, perangkat, dan lokasi Anda telah berhasil dicatat.</p>
       <button id="resetBtn" class="mt-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-semibold transition border border-gray-700">
         <i class="fa-solid fa-rotate-right mr-1.5"></i> Presensi Lagi
       </button>
@@ -148,7 +150,6 @@
 
     startCamera();
 
-    // Fungsi untuk mendapatkan koordinat lokasi GPS
     function getLoc() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
@@ -183,11 +184,9 @@
       statusMsg.innerText = "Mengambil data lokasi & mendeteksi wajah...";
       statusMsg.className = "text-xs font-medium text-yellow-400";
 
-      // Ambil lokasi GPS secara paralel
       const koordinatLokasi = await getLoc();
       const infoPerangkat = navigator.userAgent;
 
-      // Tangkap frame gambar ke Canvas
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
@@ -225,7 +224,6 @@
 
         const fotoUrl = urlData.publicUrl;
 
-        // Simpan data lengkap ke database termasuk lokasi dan perangkat
         const { error: dbError } = await db.from('presensi').insert([{
           username: username,
           foto_url: fotoUrl,
