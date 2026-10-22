@@ -38,8 +38,8 @@
     <h1 class="text-lg font-bold text-white">Presensi Kehadiran Wajah</h1>
     <p id="subTitle" class="text-xs text-gray-400">Posisikan wajah Anda dengan jelas di depan kamera</p>
 
-    <!-- TAMPILAN KAMERA WEBCAM -->
-    <div id="cameraContainer" class="relative overflow-hidden rounded-2xl bg-black aspect-video border border-gray-800 shadow-inner flex items-center justify-center">
+    <!-- TAMPILAN KAMERA WEBCAM (Portrait di HP, Landscape di Desktop) -->
+    <div id="cameraContainer" class="relative overflow-hidden rounded-2xl bg-black aspect-[3/4] sm:aspect-video border border-gray-800 shadow-inner flex items-center justify-center max-h-[380px] sm:max-h-none">
       <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
     </div>
 
@@ -127,7 +127,13 @@
     }
 
     function startCamera() {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      // Mengoptimalkan resolusi video berdasarkan lebar layar
+      const isMobile = window.innerWidth < 640;
+      const videoConstraints = isMobile 
+        ? { facingMode: "user", width: { ideal: 480 }, height: { ideal: 640 } }
+        : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+
+      navigator.mediaDevices.getUserMedia({ video: videoConstraints })
         .then(stream => { 
           cameraStream = stream;
           video.srcObject = stream; 
